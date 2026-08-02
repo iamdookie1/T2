@@ -10,9 +10,12 @@ route (`app/api/reddit/route.js`), running on Vercel's Edge Runtime.
 
 Notes on data limits:
 - RSS doesn't carry vote scores or comment counts, so those aren't shown.
-- Only directly-linked images/GIFs/video (e.g. `i.redd.it` files) can play inline;
-  posts linking to `v.redd.it` or other pages just link out, since resolving those
-  needs Reddit's gated API.
+- Media resolution: `i.redd.it`-style direct file links play at full quality
+  as-is; `v.redd.it` (Reddit-hosted video) and single-image `imgur.com` links
+  are resolved by guessing their real CDN URLs and trying a few candidates
+  client-side until one loads; `redgifs.com`/`gfycat.com` links are resolved
+  server-side via Redgifs' free public API. Anything else (albums, article
+  links, etc.) falls back to Reddit's small RSS thumbnail or just links out.
 - NSFW detection is best-effort (title/content text matching) since Reddit strips
   the reliable flag from logged-out RSS requests — flagged posts are blurred until
   tapped.
