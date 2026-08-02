@@ -1,11 +1,20 @@
 import { NextResponse } from "next/server";
+import { getAccessToken, REDDIT_UA } from "@/lib/redditAuth";
 
-const REDDIT_UA = "web:reddit-scroller:v1.0 (by /u/reddit-scroller-app)";
 const VALID_SORTS = new Set(["hot", "new", "top", "rising"]);
 
-async function fetchReddit(url) {
+// Reddit's unauthenticated www.reddit.com/*.json endpoints return 403 for most
+// cloud/datacenter IP ranges (including Vercel's), so we go through Reddit's
+// free "application-only" OAuth flow and hit oauth.reddit.com instead. This
+// still runs entirely server-side in this route — nothing to host separately.
+async function fetchReddit(path, params) {
+  const token = await getAccessToken();
+  const url = `https://oauth.reddit.com${path}?${params.toString()}`;
   const res = await fetch(url, {
-    headers: { "User-Agent": REDDIT_UA },
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "User-Agent": REDDIT_UA,
+    },
     next: { revalidate: 30 },
   });
   if (!res.ok) {
@@ -23,10 +32,12 @@ export async function GET(request) {
       const q = (searchParams.get("q") || "").trim();
       if (!q) return NextResponse.json({ subreddits: [] });
 
-      const url = `https://www.reddit.com/subreddits/search.json?q=${encodeURIComponent(
-        q
-      )}&limit=8&include_over_18=off`;
-      const data = await fetchReddit(url);
+      const searchParamsOut = new URLSearchParams({
+        q,
+        limit: "8",
+        include_over_18: "off",
+      });
+      const data = await fetchReddit("/subreddits/search", searchParamsOut);
       const subreddits = (data?.data?.children || []).map((c) => ({
         name: c.data.display_name,
         title: c.data.title,
@@ -52,8 +63,7 @@ export async function GET(request) {
     if (after) params.set("after", after);
     if (sort === "top" && t) params.set("t", t);
 
-    const url = `https://www.reddit.com/r/${subreddit}/${sort}.json?${params.toString()}`;
-    const data = await fetchReddit(url);
+    const data = await fetchReddit(`/r/${subreddit}/${sort}`, params);
 
     const children = data?.data?.children || [];
     const posts = children
