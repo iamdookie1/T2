@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import PostCard from "./PostCard";
+import PostViewer from "./PostViewer";
 import SortBar from "./SortBar";
 
 export default function Feed({ subreddit = "popular", title }) {
@@ -11,18 +12,25 @@ export default function Feed({ subreddit = "popular", title }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [done, setDone] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(null);
   const sentinelRef = useRef(null);
   const requestId = useRef(0);
+  const abortRef = useRef(null);
 
   const loadPage = useCallback(
     async (reset) => {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
       const currentRequest = ++requestId.current;
       setLoading(true);
       setError(null);
       try {
         const params = new URLSearchParams({ subreddit, sort });
         if (!reset && after) params.set("after", after);
-        const res = await fetch(`/api/reddit?${params.toString()}`);
+        const res = await fetch(`/api/reddit?${params.toString()}`, {
+          signal: controller.signal,
+        });
         const data = await res.json();
         if (currentRequest !== requestId.current) return;
         if (!res.ok) throw new Error(data.error || "Failed to load");
@@ -31,6 +39,7 @@ export default function Feed({ subreddit = "popular", title }) {
         setAfter(data.after);
         setDone(!data.after);
       } catch (err) {
+        if (err.name === "AbortError") return;
         if (currentRequest === requestId.current) {
           setError(err.message || "Something went wrong");
         }
@@ -46,6 +55,7 @@ export default function Feed({ subreddit = "popular", title }) {
     setPosts([]);
     setAfter(null);
     setDone(false);
+    setActiveIndex(null);
     loadPage(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subreddit, sort]);
@@ -65,13 +75,31 @@ export default function Feed({ subreddit = "popular", title }) {
     return () => observer.disconnect();
   }, [loadPage, loading, done]);
 
+  async function goNext() {
+    if (activeIndex === null) return;
+    if (activeIndex < posts.length - 1) {
+      setActiveIndex(activeIndex + 1);
+    } else if (!done && !loading) {
+      await loadPage(false);
+      setActiveIndex((i) => (i !== null && i < posts.length ? i + 1 : i));
+    }
+  }
+
+  function goPrev() {
+    setActiveIndex((i) => (i !== null && i > 0 ? i - 1 : i));
+  }
+
+  const activePost = activeIndex !== null ? posts[activeIndex] : null;
+
   return (
     <>
       <SortBar title={title} sort={sort} onChange={setSort} />
       <div className="container">
-        {posts.map((post) => (
-          <PostCard key={post.id} post={post} />
-        ))}
+        <div className="post-grid">
+          {posts.map((post, i) => (
+            <PostCard key={post.id} post={post} onOpen={() => setActiveIndex(i)} />
+          ))}
+        </div>
 
         {error && <div className="state-msg">{error}</div>}
         {loading && <div className="spinner" />}
@@ -84,6 +112,17 @@ export default function Feed({ subreddit = "popular", title }) {
 
         <div ref={sentinelRef} className="sentinel" />
       </div>
+
+      {activePost && (
+        <PostViewer
+          post={activePost}
+          hasPrev={activeIndex > 0}
+          hasNext={activeIndex < posts.length - 1 || !done}
+          onPrev={goPrev}
+          onNext={goNext}
+          onClose={() => setActiveIndex(null)}
+        />
+      )}
     </>
   );
 }
