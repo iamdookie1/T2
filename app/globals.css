@@ -89,50 +89,6 @@ input {
   border-color: var(--accent);
 }
 
-.suggestions {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  right: 0;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-}
-
-.suggestion-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  cursor: pointer;
-}
-
-.suggestion-item:hover,
-.suggestion-item.active {
-  background: var(--accent-dim);
-}
-
-.suggestion-icon {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--border);
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
-.suggestion-name {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.suggestion-subs {
-  font-size: 11px;
-  color: var(--text-dim);
-}
-
 /* Sort bar */
 .sort-bar {
   max-width: 640px;
@@ -216,39 +172,12 @@ input {
   line-height: 1.35;
 }
 
-.post-body {
-  padding: 0 12px 10px;
-  font-size: 13px;
-  color: var(--text-dim);
-  white-space: pre-wrap;
-}
-
 .post-media {
   width: 100%;
   max-height: 520px;
   object-fit: contain;
   background: #000;
   display: block;
-}
-
-.post-media.nsfw {
-  filter: blur(24px);
-}
-
-.nsfw-badge {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  background: #c0392b;
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 10px;
-}
-
-.media-wrap {
-  position: relative;
 }
 
 .post-footer {
@@ -260,9 +189,8 @@ input {
   color: var(--text-dim);
 }
 
-.post-footer .score {
-  color: var(--accent);
-  font-weight: 700;
+.post-footer a:hover {
+  color: var(--text);
 }
 
 .state-msg {
